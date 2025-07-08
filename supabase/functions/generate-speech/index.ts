@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const corsHeaders = {
@@ -12,17 +11,20 @@ serve(async (req) => {
   }
 
   try {
-    const { text, speaker, volume, speed, language, type_media } = await req.json()
+    const { text, speaker, volume, speed, language, type_media, botnoiToken } = await req.json()
 
     if (!text) {
       throw new Error('Text is required')
+    }
+    if (!botnoiToken) {
+      throw new Error('Botnoi token is required')
     }
 
     // Call the Botnoi API
     const response = await fetch('https://api-voice.botnoi.ai/openapi/v1/generate_audio', {
       method: 'POST',
       headers: {
-        'Botnoi-Token': Deno.env.get('BOTNOI_TOKEN') || '',
+        'Botnoi-Token': botnoiToken,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
