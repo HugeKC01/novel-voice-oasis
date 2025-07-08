@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,6 +62,22 @@ export const TextToSpeech = () => {
 
     setLoading(true);
     try {
+      // Fetch Botnoi API key from Supabase profiles table
+      let botnoiToken = '';
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('botnoi_token')
+          .eq('id', user.id)
+          .single();
+        if (error || !data?.botnoi_token) {
+          throw new Error('Botnoi API key not found. Please set your API key in settings.');
+        }
+        botnoiToken = data.botnoi_token;
+      } else {
+        throw new Error('User not authenticated');
+      }
+
       const response = await supabase.functions.invoke('generate-speech', {
         body: {
           text: text.trim(),
@@ -70,7 +85,8 @@ export const TextToSpeech = () => {
           volume,
           speed,
           language,
-          type_media: 'mp3'
+          type_media: 'mp3',
+          botnoiToken,
         }
       });
 
