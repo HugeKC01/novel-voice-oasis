@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AuthForm } from "@/components/AuthForm";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
+import TextToSpeechPage from "./pages/TextToSpeechPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/text-to-speech" 
+        element={
+          <ProtectedRoute>
+            <TextToSpeechPage />
           </ProtectedRoute>
         } 
       />
