@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
+          botnoi_token: string | null
           created_at: string | null
           dark_mode: boolean | null
           id: string
@@ -23,6 +24,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          botnoi_token?: string | null
           created_at?: string | null
           dark_mode?: boolean | null
           id: string
@@ -30,6 +32,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          botnoi_token?: string | null
           created_at?: string | null
           dark_mode?: boolean | null
           id?: string
