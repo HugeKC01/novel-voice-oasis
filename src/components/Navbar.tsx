@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogOut, Settings, User, Home } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,27 +15,38 @@ import {
 export const Navbar = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
 
+  const isActiveRoute = (path: string) => {
+    return location.pathname === path;
+  };
+
   return (
     <nav className="border-b bg-background shadow-sm">
       <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-        <Link to="/" className="text-2xl font-bold text-primary hover:text-primary/90 transition-colors">
-          Novel Voice
-        </Link>
-        
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
+          <Link to="/dashboard" className="text-2xl font-bold text-primary hover:text-primary/90 transition-colors">
+            Novel Voice
+          </Link>
+          
           <Link to="/dashboard">
-            <Button variant="ghost" size="sm" className="text-sm font-medium">
+            <Button 
+              variant={isActiveRoute('/dashboard') ? "default" : "ghost"} 
+              size="sm" 
+              className={`text-sm font-medium ${isActiveRoute('/dashboard') ? 'bg-primary text-primary-foreground' : ''}`}
+            >
               <Home className="h-4 w-4 mr-2" />
               Home
             </Button>
           </Link>
-          
+        </div>
+        
+        <div className="flex items-center gap-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2">

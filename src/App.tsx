@@ -9,6 +9,9 @@ import { AuthForm } from "@/components/AuthForm";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import TextToSpeechPage from "./pages/TextToSpeechPage";
+import Collections from "./pages/Collections";
+import CollectionView from "./pages/CollectionView";
+import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,7 +24,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!user) {
-    return <AuthForm />;
+    return <Navigate to="/landing" replace />;
   }
   
   return <>{children}</>;
@@ -36,6 +39,10 @@ const AppRoutes = () => {
 
   return (
     <Routes>
+      <Route 
+        path="/landing" 
+        element={!user ? <Landing /> : <Navigate to="/dashboard" replace />}
+      />
       <Route 
         path="/" 
         element={
@@ -55,6 +62,22 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <TextToSpeechPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/collections" 
+        element={
+          <ProtectedRoute>
+            <Collections />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/collection/:id" 
+        element={
+          <ProtectedRoute>
+            <CollectionView />
           </ProtectedRoute>
         } 
       />

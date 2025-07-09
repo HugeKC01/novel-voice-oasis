@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Upload, Play, Save, Loader } from 'lucide-react';
+import { FileText, Upload, Play, Save, Loader, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +20,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 export const TextToSpeech = () => {
   const [text, setText] = useState('');
   const [title, setTitle] = useState('');
+  const [category, setCategory] = useState('Uncategorized');
+  const [coverImageUrl, setCoverImageUrl] = useState('');
   const [speaker, setSpeaker] = useState('1');
   const [volume, setVolume] = useState('1');
   const [speed, setSpeed] = useState(1);
@@ -179,7 +182,9 @@ export const TextToSpeech = () => {
           volume,
           speed,
           language,
-          file_type: 'mp3'
+          file_type: 'mp3',
+          category,
+          cover_image_url: coverImageUrl
         });
       if (error) throw error;
 
@@ -206,13 +211,55 @@ export const TextToSpeech = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Title</label>
+              <Input
+                placeholder="Enter a title for your audio..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Category</label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Uncategorized">Uncategorized</SelectItem>
+                  <SelectItem value="Fiction">Fiction</SelectItem>
+                  <SelectItem value="Non-Fiction">Non-Fiction</SelectItem>
+                  <SelectItem value="Education">Education</SelectItem>
+                  <SelectItem value="Business">Business</SelectItem>
+                  <SelectItem value="Romance">Romance</SelectItem>
+                  <SelectItem value="Mystery">Mystery</SelectItem>
+                  <SelectItem value="Sci-Fi">Sci-Fi</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div>
-            <label className="text-sm font-medium mb-2 block">Title</label>
-            <Input
-              placeholder="Enter a title for your audio..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+            <label className="text-sm font-medium mb-2 block">Book Cover URL (Optional)</label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter image URL for book cover..."
+                value={coverImageUrl}
+                onChange={(e) => setCoverImageUrl(e.target.value)}
+              />
+              {coverImageUrl && (
+                <div className="w-12 h-12 border rounded overflow-hidden">
+                  <img 
+                    src={coverImageUrl} 
+                    alt="Cover preview" 
+                    className="w-full h-full object-cover"
+                    onError={() => setCoverImageUrl('')}
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           <div>

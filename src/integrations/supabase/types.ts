@@ -41,9 +41,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_preferences: {
+        Row: {
+          accent_color: string | null
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accent_color?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       voice_collections: {
         Row: {
           audio_url: string | null
+          category: string | null
+          cover_image_url: string | null
           created_at: string | null
           file_type: string | null
           id: string
@@ -57,6 +83,8 @@ export type Database = {
         }
         Insert: {
           audio_url?: string | null
+          category?: string | null
+          cover_image_url?: string | null
           created_at?: string | null
           file_type?: string | null
           id?: string
@@ -70,6 +98,8 @@ export type Database = {
         }
         Update: {
           audio_url?: string | null
+          category?: string | null
+          cover_image_url?: string | null
           created_at?: string | null
           file_type?: string | null
           id?: string

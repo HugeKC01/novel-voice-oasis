@@ -14,9 +14,14 @@ interface Profile {
   dark_mode: boolean;
 }
 
+interface UserPreferences {
+  accent_color: string;
+}
+
 export const ProfileSettings = () => {
   const [activeSection, setActiveSection] = useState('profile');
   const [profile, setProfile] = useState<Profile>({ username: '', dark_mode: false });
+  const [preferences, setPreferences] = useState<UserPreferences>({ accent_color: '#16a34a' });
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,6 +30,7 @@ export const ProfileSettings = () => {
 
   useEffect(() => {
     fetchProfile();
+    fetchPreferences();
   }, [user]);
 
   useEffect(() => {
@@ -34,6 +40,38 @@ export const ProfileSettings = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [profile.dark_mode]);
+
+  useEffect(() => {
+    // Apply accent color to CSS custom properties
+    document.documentElement.style.setProperty('--primary', `${hexToHsl(preferences.accent_color)}`);
+  }, [preferences.accent_color]);
+
+  const hexToHsl = (hex: string) => {
+    // Convert hex to HSL for Tailwind CSS custom properties
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+      h = s = 0;
+    } else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+        default: h = 0;
+      }
+      h /= 6;
+    }
+
+    return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+  };
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -57,6 +95,30 @@ export const ProfileSettings = () => {
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+    }
+  };
+
+  const fetchPreferences = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (data) {
+        setPreferences({
+          accent_color: data.accent_color || '#16a34a'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching preferences:', error);
     }
   };
 
@@ -84,6 +146,36 @@ export const ProfileSettings = () => {
       toast({
         title: "Error",
         description: "Failed to update profile",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updatePreferences = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: user.id,
+          accent_color: preferences.accent_color,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Preferences updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update preferences",
         variant: "destructive",
       });
     } finally {
@@ -200,7 +292,7 @@ export const ProfileSettings = () => {
             <CardHeader>
               <CardTitle>Appearance Settings</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
                   <label className="text-sm font-medium">Dark Mode</label>
@@ -212,9 +304,50 @@ export const ProfileSettings = () => {
                 />
               </div>
 
-              <Button onClick={updateProfile} disabled={loading}>
-                Save Changes
-              </Button>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Accent Color</label>
+                  <p className="text-xs text-muted-foreground mb-3">Choose your preferred accent color</p>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <input
+                    type="color"
+                    value={preferences.accent_color}
+                    onChange={(e) => setPreferences({ ...preferences, accent_color: e.target.value })}
+                    className="w-12 h-12 rounded-lg border border-input cursor-pointer"
+                  />
+                  <Input
+                    value={preferences.accent_color}
+                    onChange={(e) => setPreferences({ ...preferences, accent_color: e.target.value })}
+                    placeholder="#16a34a"
+                    className="font-mono"
+                  />
+                </div>
+
+                <div className="grid grid-cols-6 gap-2 mt-4">
+                  {['#16a34a', '#3b82f6', '#8b5cf6', '#ef4444', '#f59e0b', '#10b981'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setPreferences({ ...preferences, accent_color: color })}
+                      className="w-8 h-8 rounded-lg border-2 hover:scale-110 transition-transform"
+                      style={{ 
+                        backgroundColor: color,
+                        borderColor: preferences.accent_color === color ? '#000' : 'transparent'
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button onClick={updateProfile} disabled={loading}>
+                  Save Theme
+                </Button>
+                <Button onClick={updatePreferences} disabled={loading} variant="outline">
+                  Save Color
+                </Button>
+              </div>
             </CardContent>
           </Card>
         );
