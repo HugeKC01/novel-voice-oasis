@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
@@ -6,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ArrowLeft, Download, Edit, Trash2, Calendar, Settings, Hash, Play } from 'lucide-react';
+import { ArrowLeft, Download, Edit, Trash2, Calendar, Settings, Hash, Play, Minus, Plus, Type } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +24,7 @@ interface VoiceCollection {
   category: string;
   cover_image_url: string;
   created_at: string;
+  book_series?: string;
 }
 
 export default function CollectionView() {
@@ -33,7 +35,16 @@ export default function CollectionView() {
   const [editingTitle, setEditingTitle] = useState('');
   const [editingCategory, setEditingCategory] = useState('');
   const [editingCoverUrl, setEditingCoverUrl] = useState('');
+  const [editingBookSeries, setEditingBookSeries] = useState('');
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showSoundSettings, setShowSoundSettings] = useState(false);
+  const [fontSize, setFontSize] = useState(16);
+  const [soundSettings, setSoundSettings] = useState({
+    speaker: '1',
+    volume: '1',
+    speed: 1,
+    language: 'th'
+  });
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -56,6 +67,13 @@ export default function CollectionView() {
       setEditingTitle(data.title);
       setEditingCategory(data.category);
       setEditingCoverUrl(data.cover_image_url || '');
+      setEditingBookSeries(data.book_series || '');
+      setSoundSettings({
+        speaker: data.speaker || '1',
+        volume: data.volume || '1',
+        speed: data.speed || 1,
+        language: data.language || 'th'
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -78,7 +96,7 @@ export default function CollectionView() {
           title: editingTitle,
           category: editingCategory,
           cover_image_url: editingCoverUrl || null,
-          updated_at: new Date().toISOString()
+          book_series: editingBookSeries || null
         })
         .eq('id', collection.id);
 
@@ -88,7 +106,8 @@ export default function CollectionView() {
         ...collection,
         title: editingTitle,
         category: editingCategory,
-        cover_image_url: editingCoverUrl
+        cover_image_url: editingCoverUrl,
+        book_series: editingBookSeries
       });
 
       setShowEditDialog(false);
@@ -97,6 +116,7 @@ export default function CollectionView() {
         description: "Collection updated successfully",
       });
     } catch (error) {
+      console.error('Update error:', error);
       toast({
         title: "Error",
         description: "Failed to update collection",
@@ -164,10 +184,10 @@ export default function CollectionView() {
       const response = await supabase.functions.invoke('generate-speech', {
         body: {
           text: collection.original_text.trim(),
-          speaker: collection.speaker,
-          volume: collection.volume,
-          speed: collection.speed,
-          language: collection.language,
+          speaker: soundSettings.speaker,
+          volume: soundSettings.volume,
+          speed: soundSettings.speed,
+          language: soundSettings.language,
           type_media: 'mp3',
           botnoiToken,
         }
@@ -179,15 +199,29 @@ export default function CollectionView() {
 
       const { audio_url } = response.data;
       
-      // Update the collection with the new audio URL
+      // Update the collection with the new audio URL and settings
       const { error: updateError } = await supabase
         .from('voice_collections')
-        .update({ audio_url })
+        .update({ 
+          audio_url,
+          speaker: soundSettings.speaker,
+          volume: soundSettings.volume,
+          speed: soundSettings.speed,
+          language: soundSettings.language
+        })
         .eq('id', collection.id);
 
       if (updateError) throw updateError;
 
-      setCollection({ ...collection, audio_url });
+      setCollection({ 
+        ...collection, 
+        audio_url,
+        speaker: soundSettings.speaker,
+        volume: soundSettings.volume,
+        speed: soundSettings.speed,
+        language: soundSettings.language
+      });
+      setShowSoundSettings(false);
       toast({
         title: "Success",
         description: "Speech generated successfully!",
@@ -258,6 +292,11 @@ export default function CollectionView() {
                   </div>
                   <h2 className="text-xl font-bold mb-2">{collection.title}</h2>
                   <p className="text-sm text-muted-foreground">{collection.category}</p>
+                  {collection.book_series && (
+                    <p className="text-xs text-primary bg-primary/10 px-2 py-1 rounded mt-2">
+                      Series: {collection.book_series}
+                    </p>
+                  )}
                   {!collection.audio_url && (
                     <span className="inline-block px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded mt-2">
                       Ungenerated Sound
@@ -290,7 +329,7 @@ export default function CollectionView() {
 
                 <div className="flex flex-col gap-2 mt-6">
                   {!collection.audio_url && (
-                    <Button onClick={generateSpeechForCollection} className="w-full">
+                    <Button onClick={() => setShowSoundSettings(true)} className="w-full">
                       <Play className="h-4 w-4 mr-2" />
                       Generate Speech
                     </Button>
@@ -332,6 +371,14 @@ export default function CollectionView() {
                               <SelectItem value="Sci-Fi">Sci-Fi</SelectItem>
                             </SelectContent>
                           </Select>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Book Series</label>
+                          <Input
+                            value={editingBookSeries}
+                            onChange={(e) => setEditingBookSeries(e.target.value)}
+                            placeholder="Enter book series name..."
+                          />
                         </div>
                         <div>
                           <label className="text-sm font-medium mb-2 block">Cover Image URL</label>
@@ -379,7 +426,7 @@ export default function CollectionView() {
                 ) : (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4">No audio file generated yet</p>
-                    <Button onClick={generateSpeechForCollection}>
+                    <Button onClick={() => setShowSoundSettings(true)}>
                       <Play className="h-4 w-4 mr-2" />
                       Generate Speech Now
                     </Button>
@@ -390,11 +437,33 @@ export default function CollectionView() {
 
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle>Original Text</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Original Text</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFontSize(Math.max(12, fontSize - 2))}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFontSize(Math.min(24, fontSize + 2))}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">{fontSize}px</span>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="max-h-96 overflow-y-auto p-4 bg-muted rounded-lg">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                  <p 
+                    className="whitespace-pre-wrap leading-relaxed"
+                    style={{ fontSize: `${fontSize}px` }}
+                  >
                     {collection.original_text}
                   </p>
                 </div>
@@ -403,6 +472,76 @@ export default function CollectionView() {
           </div>
         </div>
       </div>
+
+      {/* Sound Settings Dialog */}
+      <Dialog open={showSoundSettings} onOpenChange={setShowSoundSettings}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sound Settings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Speaker</label>
+              <Select value={soundSettings.speaker} onValueChange={(value) => setSoundSettings({...soundSettings, speaker: value})}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Speaker 1</SelectItem>
+                  <SelectItem value="2">Speaker 2</SelectItem>
+                  <SelectItem value="3">Speaker 3</SelectItem>
+                  <SelectItem value="4">Speaker 4</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Volume</label>
+              <Select value={soundSettings.volume} onValueChange={(value) => setSoundSettings({...soundSettings, volume: value})}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0.5">Low</SelectItem>
+                  <SelectItem value="1">Normal</SelectItem>
+                  <SelectItem value="1.5">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Speed</label>
+              <Select value={soundSettings.speed.toString()} onValueChange={(value) => setSoundSettings({...soundSettings, speed: parseFloat(value)})}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0.5">0.5x</SelectItem>
+                  <SelectItem value="0.75">0.75x</SelectItem>
+                  <SelectItem value="1">1x</SelectItem>
+                  <SelectItem value="1.25">1.25x</SelectItem>
+                  <SelectItem value="1.5">1.5x</SelectItem>
+                  <SelectItem value="2">2x</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Language</label>
+              <Select value={soundSettings.language} onValueChange={(value) => setSoundSettings({...soundSettings, language: value})}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="th">Thai</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={generateSpeechForCollection} className="flex-1">Generate Speech</Button>
+              <Button variant="outline" onClick={() => setShowSoundSettings(false)}>Cancel</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
