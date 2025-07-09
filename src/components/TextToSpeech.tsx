@@ -11,7 +11,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 // @ts-ignore
 import * as pdfjsLib from 'pdfjs-dist/build/pdf';
-// @ts-expect-error
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?url';
 import mammoth from 'mammoth';
 
@@ -201,6 +200,10 @@ export const TextToSpeech = () => {
     }
   };
 
+  const handleSaveCollectionClick = () => {
+    saveCollection();
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -356,7 +359,7 @@ export const TextToSpeech = () => {
             </Button>
             
             {audioUrl && (
-              <Button variant="outline" onClick={saveCollection}>
+              <Button variant="outline" onClick={handleSaveCollectionClick}>
                 <Save className="h-4 w-4 mr-2" />
                 Save Collection
               </Button>
