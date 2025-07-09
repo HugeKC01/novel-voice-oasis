@@ -1,7 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { GradientButton } from '@/components/GradientButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogOut, Settings, User, Home, Plus } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -49,16 +47,19 @@ export const Navbar = () => {
         </div>
         
         <div className="flex items-center gap-4">
-          <Link to="/text-to-speech">
-            <GradientButton 
-              variant="outline" 
-              size="sm" 
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Create</span>
-            </GradientButton>
-          </Link>
+          <div className="flex w-full">
+            <Link to="/text-to-speech">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-md border border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors shadow-sm"
+                style={{ minWidth: 'max-content' }}
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Create</span>
+              </Button>
+            </Link>
+          </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

@@ -31,6 +31,7 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = () => {
   const [duration, setDuration] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
@@ -311,6 +312,33 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = () => {
     }
   };
 
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      // Create a synthetic event to reuse handleFileUpload
+      const syntheticEvent = {
+        target: { files: [file] }
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+      handleFileUpload(syntheticEvent);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <div className="text-center mb-8">
@@ -398,22 +426,28 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = () => {
                 </div>
               </div>
 
-              <div className="flex gap-2">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  accept=".txt,.pdf,.docx"
-                  className="hidden"
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload File
-                </Button>
+              
+              {/* Drag and Drop Zone */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
+                className={`mt-2 border-2 border-dashed rounded-lg p-4 text-center transition-colors ${isDragActive ? 'border-primary bg-muted' : 'border-muted-foreground/30 bg-transparent'}`}
+                style={{ cursor: 'pointer' }}
+                tabIndex={0}
+                aria-label="Drag and drop a file here or click to upload"
+                role="button"
+              >
+                <span className="block text-sm text-muted-foreground">
+                  {isDragActive ? 'Drop your .txt, .pdf, or .docx file here!' : 'Or drag and drop a .txt, .pdf, or .docx file here, or click to upload'}
+                </span>
               </div>
             </CardContent>
           </Card>
