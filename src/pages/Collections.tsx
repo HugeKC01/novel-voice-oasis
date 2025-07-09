@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Play, Trash2, Search, Filter, Grid, List } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface VoiceCollection {
   id: string;
@@ -35,6 +34,7 @@ export default function Collections() {
   const [sortBy, setSortBy] = useState('created_at');
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCollections();
@@ -121,6 +121,15 @@ export default function Collections() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleCardClick = (id: string) => {
+    navigate(`/collection/${id}`);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation(); // Prevent card click when deleting
+    deleteCollection(id);
   };
 
   const categories = Array.from(new Set(collections.map(c => c.category))).filter(Boolean);
@@ -221,7 +230,11 @@ export default function Collections() {
             : "space-y-4"
           }>
             {filteredCollections.map((collection) => (
-              <Card key={collection.id} className="hover:shadow-lg transition-shadow group">
+              <Card 
+                key={collection.id} 
+                className="hover:shadow-lg transition-shadow group cursor-pointer"
+                onClick={() => handleCardClick(collection.id)}
+              >
                 {viewMode === 'grid' ? (
                   <div className="aspect-[3/4] relative overflow-hidden rounded-t-lg">
                     {collection.cover_image_url ? (
@@ -238,15 +251,19 @@ export default function Collections() {
                       </div>
                     )}
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <Link to={`/collection/${collection.id}`}>
+                      {collection.audio_url ? (
                         <Button size="sm" variant="secondary">
                           <Play className="h-4 w-4" />
                         </Button>
-                      </Link>
+                      ) : (
+                        <div className="px-2 py-1 bg-orange-500 text-white text-xs rounded">
+                          Ungenerated Sound
+                        </div>
+                      )}
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => deleteCollection(collection.id)}
+                        onClick={(e) => handleDeleteClick(e, collection.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -277,22 +294,25 @@ export default function Collections() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg mb-1 line-clamp-2">{collection.title}</h3>
                       <p className="text-sm text-muted-foreground mb-2">{collection.category}</p>
+                      {!collection.audio_url && (
+                        <span className="inline-block px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded mb-2">
+                          Ungenerated Sound
+                        </span>
+                      )}
                       <p className="text-xs text-muted-foreground mb-3">
                         Created: {new Date(collection.created_at).toLocaleDateString()}
                       </p>
                       
                       {viewMode === 'list' && (
                         <div className="flex gap-2">
-                          <Link to={`/collection/${collection.id}`}>
-                            <Button size="sm" variant="outline">
-                              <Play className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                          </Link>
+                          <Button size="sm" variant="outline">
+                            <Play className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => deleteCollection(collection.id)}
+                            onClick={(e) => handleDeleteClick(e, collection.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

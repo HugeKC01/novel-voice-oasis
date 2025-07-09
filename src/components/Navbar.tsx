@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Settings, User, Home } from 'lucide-react';
+import { LogOut, Settings, User, Home, Plus } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -47,6 +47,13 @@ export const Navbar = () => {
         </div>
         
         <div className="flex items-center gap-4">
+          <Link to="/text-to-speech">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Create</span>
+            </Button>
+          </Link>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2">

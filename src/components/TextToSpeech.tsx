@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Upload, Play, Save, Loader, Image as ImageIcon } from 'lucide-react';
+import { FileText, Upload, Play, Save, Loader, Image as ImageIcon, Bookmark } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -167,8 +167,17 @@ export const TextToSpeech = () => {
 
   // Accept audioUrl as param for auto-save
   const saveCollection = async (audio?: string) => {
-    const url = audio || audioUrl;
-    if (!url || !user) return;
+    if (!user) return;
+    
+    if (!text.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter some text to save",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('voice_collections')
@@ -176,7 +185,7 @@ export const TextToSpeech = () => {
           user_id: user.id,
           title: title || 'Untitled',
           original_text: text,
-          audio_url: url,
+          audio_url: audio || audioUrl || null,
           speaker,
           volume,
           speed,
@@ -187,9 +196,13 @@ export const TextToSpeech = () => {
         });
       if (error) throw error;
 
+      const message = audio || audioUrl 
+        ? "Voice collection saved successfully!" 
+        : "Text saved to collection without audio generation!";
+      
       toast({
         title: "Success",
-        description: "Voice collection saved successfully!",
+        description: message,
       });
     } catch (error) {
       toast({
@@ -202,6 +215,10 @@ export const TextToSpeech = () => {
 
   const handleSaveCollectionClick = () => {
     saveCollection();
+  };
+
+  const handleSaveTextOnly = () => {
+    saveCollection(null);
   };
 
   return (
@@ -356,6 +373,11 @@ export const TextToSpeech = () => {
                 <Play className="h-4 w-4 mr-2" />
               )}
               Generate Speech
+            </Button>
+            
+            <Button variant="outline" onClick={handleSaveTextOnly}>
+              <Bookmark className="h-4 w-4 mr-2" />
+              Save Text Only
             </Button>
             
             {audioUrl && (

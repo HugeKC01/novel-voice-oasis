@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
@@ -7,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ArrowLeft, Download, Edit, Trash2, Calendar, Settings, Hash } from 'lucide-react';
+import { ArrowLeft, Download, Edit, Trash2, Calendar, Settings, Hash, Play } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -142,6 +141,66 @@ export default function CollectionView() {
     }
   };
 
+  const generateSpeechForCollection = async () => {
+    if (!collection) return;
+
+    try {
+      // Fetch Botnoi API key from Supabase profiles table
+      let botnoiToken = '';
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('botnoi_token')
+          .eq('id', user.id)
+          .single();
+        if (error || !data?.botnoi_token) {
+          throw new Error('Botnoi API key not found. Please set your API key in settings.');
+        }
+        botnoiToken = data.botnoi_token;
+      } else {
+        throw new Error('User not authenticated');
+      }
+
+      const response = await supabase.functions.invoke('generate-speech', {
+        body: {
+          text: collection.original_text.trim(),
+          speaker: collection.speaker,
+          volume: collection.volume,
+          speed: collection.speed,
+          language: collection.language,
+          type_media: 'mp3',
+          botnoiToken,
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const { audio_url } = response.data;
+      
+      // Update the collection with the new audio URL
+      const { error: updateError } = await supabase
+        .from('voice_collections')
+        .update({ audio_url })
+        .eq('id', collection.id);
+
+      if (updateError) throw updateError;
+
+      setCollection({ ...collection, audio_url });
+      toast({
+        title: "Success",
+        description: "Speech generated successfully!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate speech",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -199,6 +258,11 @@ export default function CollectionView() {
                   </div>
                   <h2 className="text-xl font-bold mb-2">{collection.title}</h2>
                   <p className="text-sm text-muted-foreground">{collection.category}</p>
+                  {!collection.audio_url && (
+                    <span className="inline-block px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded mt-2">
+                      Ungenerated Sound
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-4">
@@ -225,6 +289,13 @@ export default function CollectionView() {
                 </div>
 
                 <div className="flex flex-col gap-2 mt-6">
+                  {!collection.audio_url && (
+                    <Button onClick={generateSpeechForCollection} className="w-full">
+                      <Play className="h-4 w-4 mr-2" />
+                      Generate Speech
+                    </Button>
+                  )}
+                  
                   <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
                     <DialogTrigger asChild>
                       <Button variant="outline" className="w-full">
@@ -306,7 +377,13 @@ export default function CollectionView() {
                     </Button>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground">No audio file available</p>
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">No audio file generated yet</p>
+                    <Button onClick={generateSpeechForCollection}>
+                      <Play className="h-4 w-4 mr-2" />
+                      Generate Speech Now
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
