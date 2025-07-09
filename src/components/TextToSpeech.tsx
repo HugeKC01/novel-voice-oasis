@@ -426,21 +426,46 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = () => {
                 </div>
               </div>
 
-              
+              {/* Visually hidden file input for Safari compatibility */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept=".txt,.pdf,.docx"
+                tabIndex={-1}
+                style={{
+                  position: 'absolute',
+                  width: 1,
+                  height: 1,
+                  opacity: 0,
+                  pointerEvents: 'none',
+                  zIndex: -1,
+                }}
+                aria-hidden="true"
+              />
               {/* Drag and Drop Zone */}
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  // Safari fix: focus first, then click
+                  if (fileInputRef.current) {
+                    fileInputRef.current.focus();
+                    fileInputRef.current.click();
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    fileInputRef.current?.click();
+                    if (fileInputRef.current) {
+                      fileInputRef.current.focus();
+                      fileInputRef.current.click();
+                    }
                   }
                 }}
                 className={`mt-2 border-2 border-dashed rounded-lg p-4 text-center transition-colors ${isDragActive ? 'border-primary bg-muted' : 'border-muted-foreground/30 bg-transparent'}`}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', position: 'relative' }}
                 tabIndex={0}
                 aria-label="Drag and drop a file here or click to upload"
                 role="button"
