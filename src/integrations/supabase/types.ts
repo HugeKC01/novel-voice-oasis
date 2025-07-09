@@ -45,6 +45,7 @@ export type Database = {
         Row: {
           accent_color: string | null
           created_at: string
+          dark_mode: boolean | null
           id: string
           updated_at: string
           user_id: string
@@ -52,6 +53,7 @@ export type Database = {
         Insert: {
           accent_color?: string | null
           created_at?: string
+          dark_mode?: boolean | null
           id?: string
           updated_at?: string
           user_id: string
@@ -59,6 +61,7 @@ export type Database = {
         Update: {
           accent_color?: string | null
           created_at?: string
+          dark_mode?: boolean | null
           id?: string
           updated_at?: string
           user_id?: string
@@ -68,6 +71,7 @@ export type Database = {
       voice_collections: {
         Row: {
           audio_url: string | null
+          book_series: string | null
           category: string | null
           cover_image_url: string | null
           created_at: string | null
@@ -83,6 +87,7 @@ export type Database = {
         }
         Insert: {
           audio_url?: string | null
+          book_series?: string | null
           category?: string | null
           cover_image_url?: string | null
           created_at?: string | null
@@ -98,6 +103,7 @@ export type Database = {
         }
         Update: {
           audio_url?: string | null
+          book_series?: string | null
           category?: string | null
           cover_image_url?: string | null
           created_at?: string | null

@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { GradientButton } from '@/components/GradientButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogOut, Settings, User, Home, Plus } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -17,25 +18,6 @@ export const Navbar = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [accentColor, setAccentColor] = useState('#3b82f6');
-
-  useEffect(() => {
-    const fetchAccentColor = async () => {
-      if (user) {
-        const { data } = await supabase
-          .from('user_preferences')
-          .select('accent_color')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (data?.accent_color) {
-          setAccentColor(data.accent_color);
-        }
-      }
-    };
-    
-    fetchAccentColor();
-  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -44,29 +26,6 @@ export const Navbar = () => {
 
   const isActiveRoute = (path: string) => {
     return location.pathname === path;
-  };
-
-  const gradientStyle = {
-    background: `linear-gradient(135deg, ${accentColor}22, ${accentColor}44)`,
-    border: `2px solid transparent`,
-    backgroundClip: 'padding-box',
-    position: 'relative' as const,
-  };
-
-  const gradientBorderStyle = {
-    content: '""',
-    position: 'absolute' as const,
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 'inherit',
-    padding: '2px',
-    background: `linear-gradient(135deg, ${accentColor}, ${accentColor}88)`,
-    mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-    maskComposite: 'xor',
-    WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-    WebkitMaskComposite: 'xor',
   };
 
   return (
@@ -91,16 +50,14 @@ export const Navbar = () => {
         
         <div className="flex items-center gap-4">
           <Link to="/text-to-speech">
-            <Button 
+            <GradientButton 
               variant="outline" 
               size="sm" 
-              className="flex items-center gap-2 relative overflow-hidden"
-              style={gradientStyle}
+              className="flex items-center gap-2"
             >
-              <div style={gradientBorderStyle}></div>
-              <Plus className="h-4 w-4 relative z-10" />
-              <span className="hidden sm:inline relative z-10">Create</span>
-            </Button>
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Create</span>
+            </GradientButton>
           </Link>
 
           <DropdownMenu>
