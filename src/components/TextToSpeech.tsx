@@ -8,6 +8,13 @@ import { FileText, Upload, Play, Save, Loader } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+// @ts-ignore
+import * as pdfjsLib from 'pdfjs-dist/build/pdf';
+// @ts-expect-error
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker?url';
+import mammoth from 'mammoth';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 export const TextToSpeech = () => {
   const [text, setText] = useState('');
@@ -18,36 +25,79 @@ export const TextToSpeech = () => {
   const [language, setLanguage] = useState('th');
   const [loading, setLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState('');
+  const [dragActive, setDragActive] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  // Helper: Parse PDF file
+  const parsePdf = async (file: File) => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map((item: any) => item.str).join(' ') + '\n';
+    }
+    return text;
+  };
+
+  // Helper: Parse DOCX file
+  const parseDocx = async (file: File) => {
+    const arrayBuffer = await file.arrayBuffer();
+    const { value } = await mammoth.extractRawText({ arrayBuffer });
+    return value;
+  };
+
+  const handleFileUpload = async (eventOrFile: React.ChangeEvent<HTMLInputElement> | File) => {
+    let file: File | undefined;
+    if (eventOrFile instanceof File) {
+      file = eventOrFile;
+    } else {
+      file = eventOrFile.target.files?.[0];
+    }
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const content = e.target?.result as string;
-      
-      // Basic text extraction for different file types
-      if (file.type === 'text/plain') {
-        setText(content);
-      } else if (file.type === 'application/pdf') {
-        // For PDF files, we'd need a proper PDF parser
-        // For now, just show a message
-        toast({
-          title: "PDF Support",
-          description: "PDF parsing requires additional setup. Please copy and paste the text for now.",
-        });
-      } else {
-        // For other formats, try to extract text
-        setText(content);
+    let extractedText = '';
+    if (file.type === 'text/plain') {
+      extractedText = await file.text();
+    } else if (file.type === 'application/pdf') {
+      try {
+        extractedText = await parsePdf(file);
+      } catch {
+        toast({ title: 'PDF Error', description: 'Failed to parse PDF.' });
       }
-      
-      setTitle(file.name.split('.')[0]);
-    };
-    
-    reader.readAsText(file);
+    } else if (
+      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      file.name.endsWith('.docx')
+    ) {
+      try {
+        extractedText = await parseDocx(file);
+      } catch {
+        toast({ title: 'DOCX Error', description: 'Failed to parse DOCX.' });
+      }
+    } else {
+      toast({ title: 'Unsupported File', description: 'Please upload a TXT, PDF, or DOCX file.' });
+      return;
+    }
+    setText(extractedText);
+    setTitle(file.name.split('.')[0]);
+  };
+
+  // Drag-and-drop handlers
+  const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
+    else if (e.type === 'dragleave') setDragActive(false);
+  };
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
   };
 
   const generateSpeech = async () => {
@@ -96,10 +146,11 @@ export const TextToSpeech = () => {
 
       const { audio_url } = response.data;
       setAudioUrl(audio_url);
-      
+      // Automatically save after generation
+      await saveCollection(audio_url);
       toast({
         title: "Success",
-        description: "Speech generated successfully!",
+        description: "Speech generated and saved to your collection!",
       });
     } catch (error) {
       toast({
@@ -112,9 +163,10 @@ export const TextToSpeech = () => {
     }
   };
 
-  const saveCollection = async () => {
-    if (!audioUrl || !user) return;
-
+  // Accept audioUrl as param for auto-save
+  const saveCollection = async (audio?: string) => {
+    const url = audio || audioUrl;
+    if (!url || !user) return;
     try {
       const { error } = await supabase
         .from('voice_collections')
@@ -122,14 +174,13 @@ export const TextToSpeech = () => {
           user_id: user.id,
           title: title || 'Untitled',
           original_text: text,
-          audio_url: audioUrl,
+          audio_url: url,
           speaker,
           volume,
           speed,
           language,
           file_type: 'mp3'
         });
-
       if (error) throw error;
 
       toast({
@@ -166,11 +217,16 @@ export const TextToSpeech = () => {
 
           <div>
             <label className="text-sm font-medium mb-2 block">Upload File or Enter Text</label>
-            <div className="flex gap-2 mb-2">
-              <Button variant="outline" onClick={() => document.getElementById('file-upload')?.click()}>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload File
-              </Button>
+            <div
+              className={`flex gap-2 mb-2 border-2 rounded-md p-4 cursor-pointer transition-colors ${dragActive ? 'border-primary bg-primary/10' : 'border-dashed border-muted'}`}
+              onDragEnter={handleDrag}
+              onDragOver={handleDrag}
+              onDragLeave={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById('file-upload')?.click()}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Drag & drop PDF, DOCX, or TXT here, or click to upload
               <input
                 id="file-upload"
                 type="file"

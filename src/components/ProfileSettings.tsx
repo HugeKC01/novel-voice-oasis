@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +26,14 @@ export const ProfileSettings = () => {
   useEffect(() => {
     fetchProfile();
   }, [user]);
+
+  useEffect(() => {
+    if (profile.dark_mode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [profile.dark_mode]);
 
   const fetchProfile = async () => {
     if (!user) return;
