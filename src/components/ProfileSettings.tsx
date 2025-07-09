@@ -11,21 +11,21 @@ import { ApiKeysSettings } from './ApiKeysSettings';
 
 interface Profile {
   username: string;
-  dark_mode: boolean;
 }
 
 interface UserPreferences {
   accent_color: string;
+  dark_mode: boolean;
 }
 
 export const ProfileSettings = () => {
   const [activeSection, setActiveSection] = useState('profile');
-  const [profile, setProfile] = useState<Profile>({ username: '', dark_mode: false });
-  const [preferences, setPreferences] = useState<UserPreferences>({ accent_color: '#16a34a' });
+  const [profile, setProfile] = useState<Profile>({ username: '' });
+  const [preferences, setPreferences] = useState<UserPreferences>({ accent_color: '#16a34a', dark_mode: false });
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
+  const { user, refreshUserPreferences } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,12 +34,13 @@ export const ProfileSettings = () => {
   }, [user]);
 
   useEffect(() => {
-    if (profile.dark_mode) {
+    // Apply dark mode immediately for visual feedback
+    if (preferences.dark_mode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [profile.dark_mode]);
+  }, [preferences.dark_mode]);
 
   useEffect(() => {
     // Apply accent color to CSS custom properties
@@ -89,8 +90,7 @@ export const ProfileSettings = () => {
 
       if (data) {
         setProfile({
-          username: data.username || '',
-          dark_mode: data.dark_mode || false
+          username: data.username || ''
         });
       }
     } catch (error) {
@@ -114,7 +114,14 @@ export const ProfileSettings = () => {
 
       if (data) {
         setPreferences({
-          accent_color: data.accent_color || '#16a34a'
+          accent_color: data.accent_color || '#16a34a',
+          dark_mode: Boolean(data.dark_mode) // Ensure boolean type
+        });
+      } else {
+        // No preferences found, use defaults
+        setPreferences({
+          accent_color: '#16a34a',
+          dark_mode: false
         });
       }
     } catch (error) {
@@ -132,7 +139,6 @@ export const ProfileSettings = () => {
         .upsert({
           id: user.id,
           username: profile.username,
-          dark_mode: profile.dark_mode,
           updated_at: new Date().toISOString()
         });
 
@@ -158,15 +164,41 @@ export const ProfileSettings = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
+      // First, check if preferences already exist
+      const { data: existingPrefs, error: fetchError } = await supabase
         .from('user_preferences')
-        .upsert({
-          user_id: user.id,
-          accent_color: preferences.accent_color,
-          updated_at: new Date().toISOString()
-        });
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
 
-      if (error) throw error;
+      if (existingPrefs && !fetchError) {
+        // Update existing record
+        const { error } = await supabase
+          .from('user_preferences')
+          .update({
+            accent_color: preferences.accent_color,
+            dark_mode: preferences.dark_mode,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from('user_preferences')
+          .insert({
+            user_id: user.id,
+            accent_color: preferences.accent_color,
+            dark_mode: preferences.dark_mode,
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
+      }
+
+      // Refresh user preferences to apply changes immediately
+      await refreshUserPreferences();
 
       toast({
         title: "Success",
@@ -299,8 +331,8 @@ export const ProfileSettings = () => {
                   <p className="text-xs text-muted-foreground">Toggle dark mode theme</p>
                 </div>
                 <Switch
-                  checked={profile.dark_mode}
-                  onCheckedChange={(checked) => setProfile({ ...profile, dark_mode: checked })}
+                  checked={preferences.dark_mode}
+                  onCheckedChange={(checked) => setPreferences({ ...preferences, dark_mode: checked })}
                 />
               </div>
 
@@ -341,11 +373,8 @@ export const ProfileSettings = () => {
               </div>
 
               <div className="flex gap-2">
-                <Button onClick={updateProfile} disabled={loading}>
-                  Save Theme
-                </Button>
-                <Button onClick={updatePreferences} disabled={loading} variant="outline">
-                  Save Color
+                <Button onClick={updatePreferences} disabled={loading}>
+                  Save Preferences
                 </Button>
               </div>
             </CardContent>
